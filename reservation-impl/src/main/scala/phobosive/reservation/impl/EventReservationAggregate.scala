@@ -5,7 +5,6 @@ import java.time.Instant
 import akka.actor.typed.Behavior
 import akka.cluster.sharding.typed.scaladsl._
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.scaladsl.Effect.reply
 import akka.persistence.typed.scaladsl.{EventSourcedBehavior, ReplyEffect, RetentionCriteria}
 import com.lightbend.lagom.scaladsl.persistence._
 import com.lightbend.lagom.scaladsl.playjson.{JsonSerializer, JsonSerializerRegistry}
@@ -53,7 +52,7 @@ object EventReservation {
 
 final case class EventReservation(
   ticketsAvailable: Int,
-  clientTicketLimit: Int,
+  customerTicketLimit: Int,
   ticketsReserved: Int,
   ticketMap: Map[String, ReservationItem]
 ) extends EventReservationProperties
@@ -90,7 +89,6 @@ final case class EventReservation(
  */
 object ReservationSerializerRegistry extends JsonSerializerRegistry {
   import EventReservation._
-//  import ReservationResponse._
 
   override def serializers: Seq[JsonSerializer[_]] = Seq(
     // state and events can use play-json, but commands should use jackson because of ActorRef[T] (see application.conf)

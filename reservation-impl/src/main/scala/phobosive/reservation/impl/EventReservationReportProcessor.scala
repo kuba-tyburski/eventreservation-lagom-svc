@@ -10,7 +10,7 @@ class EventReservationReportProcessor(readSide: SlickReadSide, repository: Reser
   override def buildHandler(): ReadSideProcessor.ReadSideHandler[Event] =
     readSide
       .builder[Event]("event-reservation-report")
-      .setGlobalPrepare(repository.createTable())
+//      .setGlobalPrepare(repository.createTable()) // definition of indexes in slick table gives a lot of exceptions
       .setEventHandler[ReservationAdded] { envelope =>
         repository.createReport(
           CustomerReservationReport(

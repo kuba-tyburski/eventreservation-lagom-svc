@@ -10,7 +10,8 @@ val macwire = "com.softwaremill.macwire" %% "macros" % "2.3.3" % "provided"
 val postgresDriver = "org.postgresql" % "postgresql" % "42.2.10"
 val kebsSlick = "pl.iterators"  %% "kebs-slick"      % "1.7.1"
 val slickPg = "com.github.tminglei" %% "slick-pg"  % "0.18.1"
-val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8" % Test
+val scalaMock = "org.scalamock" %% "scalamock" % "4.4.0" % Test
+val scalaTest = "org.scalatest" %% "scalatest" % "3.1.0" % Test
 
 lazy val `reservation` = (project in file("."))
   .aggregate(`reservation-api`, `reservation-impl`)
@@ -35,6 +36,7 @@ lazy val `reservation-impl` = (project in file("reservation-impl"))
       enumeratum,
       kebsSlick,
       slickPg,
+      scalaMock,
       scalaTest
     )
   )

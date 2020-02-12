@@ -5,7 +5,8 @@ import java.util.UUID
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import akka.persistence.typed.PersistenceId
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import phobosive.reservation.api.ReservationStatus
 import phobosive.reservation.impl.EventReservation.ReservationItem
 import phobosive.reservation.impl.model.ReservationResponse._
@@ -15,7 +16,7 @@ class EventReservationAggregateSpec extends ScalaTestWithActorTestKit(s"""
       akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
       akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
       akka.persistence.snapshot-store.local.dir = "target/snapshot-${UUID.randomUUID().toString}"
-    """) with WordSpecLike with Matchers {
+    """) with AnyWordSpecLike with Matchers {
 
   private def randomId(): String = UUID.randomUUID().toString
 
@@ -36,11 +37,11 @@ class EventReservationAggregateSpec extends ScalaTestWithActorTestKit(s"""
       response.status should equal(ReservationStatus.Full)
     }
 
-    "reserve ticket partially due to client limit" in {
+    "reserve ticket partially due to customer limit" in {
       // given
       val probe              = createTestProbe[ReservationResponse]()
       val expectedQuantity   = 3
-      val initialState       = prepareInitialState(ticketsAvailable = 10, clientTicketLimit = expectedQuantity)
+      val initialState       = prepareInitialState(ticketsAvailable = 10, customerTicketLimit = expectedQuantity)
       val ref                = spawn(EventReservation.create(PersistenceId("EventReservation", randomId()), initialState))
       val expectedCustomerId = randomId()
 
@@ -49,7 +50,7 @@ class EventReservationAggregateSpec extends ScalaTestWithActorTestKit(s"""
 
       val response = probe.expectMessageType[Success]
       response.quantity should equal(expectedQuantity)
-      response.status should equal(ReservationStatus.PartialClientLimit)
+      response.status should equal(ReservationStatus.PartialCustomerLimit)
     }
 
     "reserve ticket partially due to event full" in {
@@ -70,7 +71,7 @@ class EventReservationAggregateSpec extends ScalaTestWithActorTestKit(s"""
       response.status should equal(ReservationStatus.PartialEventFull)
     }
 
-    "doesn't allow to reserve ticket if client already have" in {
+    "doesn't allow to reserve ticket if customer already have" in {
       // given
       val probe                  = createTestProbe[ReservationResponse]()
       val expectedCustomerId     = randomId()
@@ -206,7 +207,7 @@ class EventReservationAggregateSpec extends ScalaTestWithActorTestKit(s"""
       probe.expectMessage(ReservationNotFound)
     }
 
-    "get customer reservations" in {
+    "get customer reservations for event" in {
       // given
       val probe                    = createTestProbe[ReservationReportResponse]()
       val expectedCustomerId       = randomId()
@@ -259,7 +260,7 @@ class EventReservationAggregateSpec extends ScalaTestWithActorTestKit(s"""
       reservations should have size 0
     }
 
-    "get all reservations" in {
+    "get all reservations for event" in {
       // given
       val probe                    = createTestProbe[ReservationReportResponse]()
       val expectedCustomerId       = randomId()
@@ -291,10 +292,10 @@ class EventReservationAggregateSpec extends ScalaTestWithActorTestKit(s"""
 
   private def prepareInitialState(
     ticketsAvailable: Int                        = 30,
-    clientTicketLimit: Int                       = 5,
+    customerTicketLimit: Int                     = 5,
     ticketsReserved: Int                         = 0,
     reservationMap: Map[String, ReservationItem] = Map()
-  ) = new EventReservation(ticketsAvailable, clientTicketLimit, ticketsReserved, reservationMap)
+  ) = new EventReservation(ticketsAvailable, customerTicketLimit, ticketsReserved, reservationMap)
 
   private def prepareReservationItem(
     reservationId: String     = UUID.randomUUID().toString,

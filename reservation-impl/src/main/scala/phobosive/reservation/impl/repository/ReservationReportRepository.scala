@@ -5,12 +5,8 @@ import java.time.Instant
 import akka.Done
 import phobosive.reservation.api.{CustomerReservationReport, ReservationStatus}
 import slick.dbio.DBIO
-import slick.lifted.ProvenShape
-//import com.github.tminglei.slickpg.ExPostgresProfile
-//import CommonPostgresProfile.api._
-//import pl.iterators.kebs._
-//import enums._
 import slick.jdbc.PostgresProfile.api._
+import slick.lifted.ProvenShape
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

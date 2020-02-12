@@ -1,0 +1,372 @@
+openapi: '3.0.2'
+info:
+  version: 0.0.1
+  title: Event Reservation Svc
+  contact:
+    name: Tyburski Jakub
+    email: kuba.tyburski@gmail.com
+
+servers:
+  - url: https://{environment}.example.com
+    variables:
+      environment:
+        default: api    # Production server
+        enum:
+          - api         # Production server
+          - api.dev     # Development server
+          - api.staging # Staging server:
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/health/check:
+    get:
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
+
+  /api/event/{eventId}/customer/{customerId}:
+    get:
+      security: []
+      description: Get customer tickets for event
+      parameters:
+        - in: path
+          name: eventId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: event id
+        - in: path
+          name: customerId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: customer id
+      responses:
+        200:
+          description: Reservations for event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventReservationsView'
+    post:
+      security: []
+      description: Reserve ticket
+      parameters:
+        - in: path
+          name: eventId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: event id
+        - in: path
+          name: customerId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: customer id
+      responses:
+        200:
+          description: Customer reservation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerReservationReport'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                alreadyExists:
+                  summary: Customer already has reservation
+                  value:
+                    name: BadRequest
+                    detail: Customer already has reservation
+                noTickets:
+                  summary: No tickets available for event
+                  value:
+                    name: BadRequest
+                    detail: No tickets available for event
+                illegalQuantity:
+                  summary: Quantity out of accepted range
+                  value:
+                    name: BadRequest
+                    detail: Quantity out of accepted range
+        404:
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Reservation not found
+                  value:
+                    name: NotFound
+                    detail: Reservation not found
+        500:
+          description: Generic error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                genericError:
+                  summary: Generic error
+                  value:
+                    name: InternalServerError
+                    detail: Generic error
+
+  /api/event/{eventId}/customer/{customerId}/reservation/{reservationId}:
+    delete:
+      security: []
+      description: Cancel ticket reservation
+      parameters:
+        - in: path
+          name: eventId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: event id
+        - in: path
+          name: customerId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: customer id
+        - in: path
+          name: reservationId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: reservation id
+      responses:
+        200:
+          description: Customer reservation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerCancelReport'
+        404:
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Reservation not found
+                  value:
+                    name: NotFound
+                    detail: Reservation not found
+        500:
+          description: Generic error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                genericError:
+                  summary: Generic error
+                  value:
+                    name: InternalServerError
+                    detail: Generic error
+
+  /api/event/{eventId}/customer/{customerId}/reservation/{reservationId}/extend:
+    post:
+      security: []
+      description: Cancel ticket reservation
+      parameters:
+        - in: path
+          name: eventId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: event id
+        - in: path
+          name: customerId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: customer id
+        - in: path
+          name: reservationId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: reservation id
+      responses:
+        200:
+          description: Customer reservation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerReservationReport'
+        404:
+          description: Reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Reservation not found
+                  value:
+                    name: NotFound
+                    detail: Reservation not found
+        500:
+          description: Generic error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                genericError:
+                  summary: Generic error
+                  value:
+                    name: InternalServerError
+                    detail: Generic error
+
+  /api/admin/event:
+    get:
+      security: []
+      description: Get ticket reservations for all events
+      responses:
+        200:
+          description: Reservations for all event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllEventReservationsView'
+  /api/admin/event/{eventId}:
+    get:
+      security: []
+      description: Get ticket reservations for event
+      parameters:
+        - in: path
+          name: eventId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: event id
+      responses:
+        200:
+          description: Reservations for event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventReservationsView'
+  /api/customer/{customerId}:
+    get:
+      security: []
+      description: Get ticket reservations for event
+      parameters:
+        - in: path
+          name: customerId
+          schema:
+            $ref: '#/components/schemas/UUID'
+          required: true
+          description: customer id
+      responses:
+        200:
+          description: Customer reservations for all events
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllEventReservationsView'
+
+components:
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+    Instant:
+      type: integer
+      format: int64
+      nullable: false
+    EventReservationsView:
+      type: object
+      required:
+        - id
+        - reservations
+      properties:
+        id:
+          type: string
+          format: uuid
+        reservations:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/TicketReservation'
+    TicketReservation:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        quantity:
+          type: integer
+        reservedAt:
+          $ref: '#/components/schemas/Instant'
+    CustomerReservationReport:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        eventId:
+          $ref: '#/components/schemas/UUID'
+        customerId:
+          $ref: '#/components/schemas/UUID'
+        ticketsOrdered:
+          type: integer
+        ticketsReserved:
+          type: integer
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        reservedAt:
+          $ref: '#/components/schemas/Instant'
+        cancelledAt:
+          type: integer
+          format: int64
+          nullable: true
+    CustomerCancelReport:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUID'
+        eventId:
+          $ref: '#/components/schemas/UUID'
+        customerId:
+          $ref: '#/components/schemas/UUID'
+        status:
+          $ref: '#/components/schemas/ReservationStatus'
+        cancelledAt:
+          $ref: '#/components/schemas/Instant'
+    AllEventReservationsView:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventReservationsView'
+    ReservationStatus:
+      type: string
+      enum:
+        - Full
+        - PartialCustomerLimit
+        - PartialEventFull
+        - Cancelled
+    ErrorResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        detail:
+          type: string

@@ -15,7 +15,6 @@ import phobosive.reservation.api._
 import phobosive.reservation.impl.model.ReservationCommand._
 import phobosive.reservation.impl.model.ReservationEvent._
 import phobosive.reservation.impl.model.ReservationResponse
-//import phobosive.reservation.impl.repository.CommonPostgresProfile.api._
 import phobosive.reservation.impl.repository.ReservationReportRepository
 import slick.jdbc.PostgresProfile.api._
 
@@ -31,7 +30,7 @@ class EventReservationServiceImpl(
   reservationReportRepository: ReservationReportRepository,
   db: Database
 )(implicit ec: ExecutionContext, as: ActorSystem, mat: Materializer)
-    extends ReservationService {
+    extends EventReservationService {
 
   /**
    * Looks up the entity for the given ID.
@@ -42,7 +41,7 @@ class EventReservationServiceImpl(
   implicit val timeout = Timeout(5.seconds)
 
   /**
-   * get all reservations for event
+   * get all reservations for all events
    *
    * @return reservations view for all events
    */
@@ -59,7 +58,7 @@ class EventReservationServiceImpl(
   }
 
   /**
-   * get all reservations made by customer
+   * get all reservations made by customer for all events
    *
    * @param customerId - customer unique id
    * @return customer reservations report for all event
@@ -68,6 +67,39 @@ class EventReservationServiceImpl(
     db.run(reservationReportRepository.findByCustomerId(customerId)).flatMap { result =>
       processSource(Source(result))
     }
+  }
+
+  /**
+   * get all reservations for event id
+   *
+   * @param eventId
+   * @return reservations view for all events
+   */
+  override def getReservationsForEvent(eventId: String): ServiceCall[NotUsed, EventReservationsView] = ServiceCall { request =>
+    // todo validate data from request jwt, authorization etc
+
+    import ReservationResponse._
+    entityRef(eventId)
+      .ask[ReservationResponse](replyTo => GetAllReservations(replyTo))
+      .map {
+        case Ok(ticketsReservations) => computeEventReservationView(eventId, ticketsReservations)
+      }
+  }
+
+  /**
+   * get all reservations made by customer for event id
+   *
+   * @param eventId
+   * @param customerId - customer unique id
+   * @return customer reservations report for event id
+   */
+  override def getCustomerReservationsForEvent(eventId: String, customerId: String): ServiceCall[NotUsed, EventReservationsView] = ServiceCall { _ =>
+    import ReservationResponse._
+    entityRef(eventId)
+      .ask[ReservationResponse](replyTo => GetCustomerReservations(customerId, replyTo))
+      .map {
+        case Ok(ticketsReservations) => computeEventReservationView(eventId, ticketsReservations)
+      }
   }
 
   /**
@@ -86,9 +118,10 @@ class EventReservationServiceImpl(
         case Success(reservationId, ticketsReserved, reservedAt, status) =>
           CustomerReservationReport(reservationId, eventId, customerId, Some(request.quantity), ticketsReserved, status.entryName, reservedAt, None)
 
-        case ReservationNotFound => throw NotFound("Reservation not found")
-        case NoTicketsAvailable  => throw BadRequest("No tickets available for event")
-        case IllegalQuantity     => throw BadRequest("Quantity out of accepted range")
+        case ReservationAlreadyExists => throw BadRequest("Customer already has reservation")
+        case ReservationNotFound      => throw NotFound("Reservation not found")
+        case NoTicketsAvailable       => throw BadRequest("No tickets available for event")
+        case IllegalQuantity          => throw BadRequest("Quantity out of accepted range")
         case _ =>
           throw TransportException.fromCodeAndMessage(
             TransportErrorCode.InternalServerError,
@@ -163,6 +196,10 @@ class EventReservationServiceImpl(
             )
         }
     }
+
+  override def healthCheck(): ServiceCall[NotUsed, String] = ServiceCall { _ =>
+    Future.successful("OK")
+  }
 
   /**
    * This gets published to Kafka.

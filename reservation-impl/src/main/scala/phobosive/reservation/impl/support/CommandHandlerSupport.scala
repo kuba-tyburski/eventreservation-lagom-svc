@@ -32,9 +32,9 @@ trait CommandHandlerSupport { self: EventReservationProperties =>
           var reservedQuantity                     = quantity
           var reservationStatus: ReservationStatus = ReservationStatus.Full
 
-          if (clientTicketLimit < reservedQuantity) {
-            reservedQuantity  = clientTicketLimit
-            reservationStatus = ReservationStatus.PartialClientLimit
+          if (customerTicketLimit < reservedQuantity) {
+            reservedQuantity  = customerTicketLimit
+            reservationStatus = ReservationStatus.PartialCustomerLimit
           }
           if (ticketsAvailable - ticketsReserved < reservedQuantity) {
             reservedQuantity  = ticketsAvailable - ticketsReserved

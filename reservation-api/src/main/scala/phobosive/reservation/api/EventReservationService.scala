@@ -10,7 +10,7 @@ import com.lightbend.lagom.scaladsl.api.{Descriptor, Service, ServiceCall}
 import enumeratum.{Enum, EnumEntry, PlayJsonEnum}
 import play.api.libs.json.{Format, Json}
 
-object ReservationService {
+object EventReservationService {
   val TOPIC_NAME = "reservations"
 }
 
@@ -20,23 +20,43 @@ object ReservationService {
  * This describes everything that Lagom needs to know about how to serve and
  * consume the ReservationService.
  */
-trait ReservationService extends Service {
+trait EventReservationService extends Service {
 
   /**
    * get all reservations for event
+   *
    * @return reservations view for all events
    */
   def getAllReservations: ServiceCall[NotUsed, AllEventReservationsView]
 
   /**
    * get all reservations made by customer
+   *
    * @param customerId - customer unique id
    * @return customer reservations report for all event
    */
   def getCustomerReservations(customerId: String): ServiceCall[NotUsed, AllEventReservationsView]
 
   /**
+   * get all reservations for event id
+   *
+   * @param eventId
+   * @return reservations view for all events
+   */
+  def getReservationsForEvent(eventId: String): ServiceCall[NotUsed, EventReservationsView]
+
+  /**
+   * get all reservations made by customer for event id
+   *
+   * @param eventId
+   * @param customerId - customer unique id
+   * @return customer reservations report for event id
+   */
+  def getCustomerReservationsForEvent(eventId: String, customerId: String): ServiceCall[NotUsed, EventReservationsView]
+
+  /**
    * try to reserve tickets on event
+   *
    * @param eventId
    * @param customerId
    * @request ticket reservation request
@@ -46,6 +66,7 @@ trait ReservationService extends Service {
 
   /**
    * extend existing reservation time
+   *
    * @param eventId
    * @param customerId
    * @param reservationId
@@ -55,12 +76,19 @@ trait ReservationService extends Service {
 
   /**
    * cancel existing reservation
+   *
    * @param eventId
    * @param customerId
    * @param reservationId
    * @return
    */
   def cancelTicketReservation(eventId: String, customerId: String, reservationId: String): ServiceCall[NotUsed, CustomerCancelReport]
+
+  /**
+   * health check
+   * @return
+   */
+  def healthCheck(): ServiceCall[NotUsed, String]
 
   /**
    * This gets published to Kafka.
@@ -72,15 +100,19 @@ trait ReservationService extends Service {
     // @formatter:off
     named("reservation")
       .withCalls(
-        restCall(Method.POST, "/api/event/:eventId/customer/:customerId", reserveTicket _),// todo customerId passed in jwt
+        restCall(Method.POST, "/api/event/:eventId/customer/:customerId", reserveTicket _), // todo customerId passed in jwt
         restCall(Method.POST, "/api/event/:eventId/customer/:customerId/reservation/:reservationId/extend", extendTicketReservation _), // todo customerId passed in jwt
-        restCall(Method.DELETE, "/api/event/:eventId/customer/:customerId/reservation/:reservationId", cancelTicketReservation _),// todo customerId passed in jwt
+        restCall(Method.DELETE, "/api/event/:eventId/customer/:customerId/reservation/:reservationId", cancelTicketReservation _), // todo customerId passed in jwt
 
-        restCall(Method.GET, "/api/customer/:customerId/reservations", getCustomerReservations _),// todo customerId passed in jwt
-        restCall(Method.GET, "/api/admin/reservations", getAllReservations _) // todo add some role based access [jwt]
+        restCall(Method.GET, "/api/customer/:customerId", getCustomerReservations _), // todo customerId passed in jwt
+        restCall(Method.GET, "/api/event/:eventId/customer/:customerId", getCustomerReservationsForEvent _), // todo customerId passed in jwt
+        restCall(Method.GET, "/api/admin/event", getAllReservations _), // todo add some role based access [jwt]
+        restCall(Method.GET, "/api/admin/event/:eventId", getReservationsForEvent _), // todo add some role based access [jwt]
+
+        restCall(Method.GET, "/api/health/check", healthCheck())
       )
       .withTopics(
-        topic(ReservationService.TOPIC_NAME, reservationTopic _)
+        topic(EventReservationService.TOPIC_NAME, reservationTopic _)
           // Kafka partitions messages, messages within the same partition will
           // be delivered in order, to ensure that all messages for the same user
           // go to the same partition (and hence are delivered in order with respect
@@ -150,7 +182,6 @@ object AllEventReservationsView {
  * @param status - reservation status
  * @param reservedAt - reservation time
  * @param cancelledAt - cancel time
- * // todo add some flag for notifying it went from reserved to buy
  */
 final case class CustomerReservationReport(
   id: String,
@@ -174,7 +205,6 @@ object CustomerReservationReport {
  * @param customerId
  * @param status - reservation status
  * @param cancelledAt - cancel time
- * // todo add some flag for notifying it went from reserved to buy
  */
 final case class CustomerCancelReport(
   id: String,
@@ -189,15 +219,10 @@ object CustomerCancelReport {
 
 sealed trait ReservationStatus extends EnumEntry
 object ReservationStatus extends Enum[ReservationStatus] with PlayJsonEnum[ReservationStatus] {
-  case object Full               extends ReservationStatus
-  case object PartialClientLimit extends ReservationStatus
-  case object PartialEventFull   extends ReservationStatus
-  case object Cancelled          extends ReservationStatus
+  case object Full                 extends ReservationStatus
+  case object PartialCustomerLimit extends ReservationStatus
+  case object PartialEventFull     extends ReservationStatus
+  case object Cancelled            extends ReservationStatus
 
   val values = findValues
 }
-
-//object ReservationStatus extends Enumeration {
-//  type ReservationStatus = Value
-//  val Full, PartialClientLimit, PartialEventFull, Cancelled = Value
-//}
