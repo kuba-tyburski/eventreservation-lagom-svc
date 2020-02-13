@@ -60,6 +60,6 @@ curl http://localhost:9000/api/admin/event/123
 
 * Additional reservation state `Expired`
 * Scheduler to automatically expire reservations
-* Fix enum storage witch e.g. `KebsEnum` (couldn't make it work for now, some issues with using enum field in slick filters)
+* Fix enum storage with e.g. `KebsEnum` (couldn't make it work for now, some issues with using enum field in slick filters)
 * introduce authorization with e.g. `JWT`
 * probably many more...
